@@ -1,33 +1,53 @@
+from django.contrib.auth import login
+from django.contrib.auth.models import User
 from knox.models import AuthToken
+from knox.views import LoginView as KnoxLoginView
+from rest_framework import generics
+from rest_framework import permissions
+from rest_framework import status
+from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from feed.models import Feed
 from feed.serializer import FeedSerializer
 from .models import Profile
 from .serializer import UserSerializer, RegisterSerializer, ChangePasswordSerializer, ProfileSerializer, \
     ProfilePostSerializer
-from django.contrib.auth import login
-
-from rest_framework import permissions
-from rest_framework.authtoken.serializers import AuthTokenSerializer
-from knox.views import LoginView as KnoxLoginView
-
-from rest_framework import status
-from rest_framework import generics
-from rest_framework.response import Response
-from django.contrib.auth.models import User
-from rest_framework.permissions import IsAuthenticated, AllowAny
 
 
 # Register API
 class RegisterAPI(generics.GenericAPIView):
     serializer_class = RegisterSerializer
+    permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        data = request.data
+        username = data.get('username')
+        email = data.get('email')
+        serializer = self.get_serializer(data=data)
+        users_qs = User.objects.filter(email=email)
+        user_name = User.objects.filter(username=username)
+        if users_qs.exists():
+            return Response({'A user with this email already exists'})
+        if user_name.exists():
+            return Response({'A user with this username already exists'})
+
+        # else:
+        #     return data
+        # if User.objects.filter(email=email).exists():
+        #     messages['errors'].append("Account already exists with this email id.")
+        # if User.objects.filter(username__iexact=username).exists():
+        #     messages['errors'].append("Account already exists with this username.")
+        # if len(messages['errors']) > 0:
+        #     return Response({"detail": messages['errors']}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
+            Profile.objects.create(user=user)  # To create automatically a profile during registering
+        except Exception as e:
+            return Response({'detail': f'{e}'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({
             "user": UserSerializer(user, context=self.get_serializer_context()).data,
             "token": AuthToken.objects.create(user)[1]
@@ -37,7 +57,7 @@ class RegisterAPI(generics.GenericAPIView):
 class LoginAPI(KnoxLoginView):
     permission_classes = (permissions.AllowAny,)
 
-    def post(self, request, format=None):
+    def post(self, request, formats=None):
         serializer = AuthTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
@@ -90,7 +110,7 @@ class UserAPI(generics.RetrieveAPIView):
 @permission_classes([IsAuthenticated])
 def get_profile(request):
     if request.method == 'GET':
-        profile = Profile.objects.get(id=request.user.id)
+        profile = Profile.objects.get(user_id=request.user.id)
         my_p = Feed.objects.filter(user_id=request.user.id)
         my = FeedSerializer(my_p, many=True)
         serializer = ProfileSerializer(profile, many=False)
@@ -108,41 +128,40 @@ def get_profile(request):
 @permission_classes([IsAuthenticated])
 def users_following_me(request, pk):
     if request.method == "POST":
-        # the_user_to_follow = get_object_or_404(Profile, user_id=pk)
-        # follows = Profile.objects.all().exclude(user_id=request.user.id)
+        current_profile = Profile.objects.get(user_id=request.user.id)
+        profile_to_follow = Profile.objects.get(user_id=pk)
+        print(current_profile, profile_to_follow)
 
-        the_user_to_follow = Profile.objects.get(user_id=pk)
-        currentUser = Profile.objects.get(user_id=request.user.id)
-        my_following_users = the_user_to_follow.followers.all()
+        if current_profile == profile_to_follow:
+            return Response("You cannot follow youserlf")
+        if profile_to_follow in current_profile.followers.all():
+            current_profile.followers.remove(profile_to_follow)
+            current_profile.save()
+            return Response('unfollowed')
 
-        if pk != currentUser.user_id:
-            if currentUser in my_following_users:
-                the_user_to_follow.followers.remove(currentUser.id)
-
-                return Response('unfollowed')
-
-            else:
-                the_user_to_follow.followers.add(currentUser.user_id)
-                return Response('followed')
+        else:
+            current_profile.followers.add(profile_to_follow)
+            current_profile.save()
+            return Response('followed')
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def i_follow_users(request, pk):
     if request.method == "POST":
-        # the_user_to_follow = get_object_or_404(Profile, user_id=pk)
+        # profile_to_follow = get_object_or_404(Profile, user_id=pk)
         # follows = Profile.objects.all().exclude(user_id=request.user.id)
 
-        the_user_to_follow = Profile.objects.get(user_id=pk)
+        profile_to_follow = Profile.objects.get(user_id=pk)
         currentUser = Profile.objects.get(user_id=request.user.id)
-        my_following_users = the_user_to_follow.followers.all()
+        my_following_users = profile_to_follow.followers.all()
 
         if pk != currentUser.user_id:
             if currentUser in my_following_users:
-                the_user_to_follow.followers.remove(currentUser.id)
+                profile_to_follow.followers.remove(currentUser.id)
 
                 return Response('unfollowed')
 
             else:
-                the_user_to_follow.followers.add(currentUser.user_id)
+                profile_to_follow.followers.add(currentUser.user_id)
                 return Response('followed')

@@ -30,16 +30,9 @@ class Profile(models.Model):
     cover_image = models.ImageField(upload_to="devcom", blank=True)
     bio = models.TextField(blank=True)
     followers = models.ManyToManyField('self', blank=True)
-    following = models.ManyToManyField('self', blank=True)
+    # following = models.ManyToManyField('self', blank=True)
 
-    @receiver(post_save, sender=User)
-    def create_user_profile(sender, instance, created, **kwargs):
-        if created:
-            Profile.objects.create(user=instance)
 
-    @receiver(post_save, sender=User)
-    def save_user_profile(sender, instance, **kwargs):
-        instance.profile.save()
     @property
     def my_posts(self):
         print(self.user.feed_set.all())
@@ -53,9 +46,13 @@ class Profile(models.Model):
     def my_followers_count(self):
         return self.followers.count()
 
-    @property
-    def my_following_count(self):
-        return self.following.count()
+    # @property
+    # def my_following_count(self):
+    #     return self.following.count()
 
     def __str__(self):
         return self.user.username
+
+
+# post_save.connect(create_user_profile, sender=User)
+# post_save.connect(save_user_profile, sender=User)

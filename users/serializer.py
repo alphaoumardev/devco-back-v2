@@ -1,8 +1,9 @@
+from abc import ABC
+
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
 from users.models import Profile
-
 
 # User Serializer
 class UserSerializer(serializers.ModelSerializer):
@@ -22,18 +23,19 @@ class RegisterSerializer(serializers.ModelSerializer):
         users_qs = User.objects.filter(email=data['email'])
         user_name = User.objects.filter(username=['username'])
         if users_qs.exists() or user_name.exists():
-            raise serializers.ValidationError('user with this email and username already exists')
+            raise serializers.ValidationError('A user with this email or username already exists')
         else:
             return data
 
     def create(self, validated_data):
-        user = User.objects.create_user(validated_data['username'], validated_data['email'],
+        user = User.objects.create_user(validated_data['username'],
+                                        validated_data['email'],
                                         validated_data['password'], )
         return user
 
 
 # Serializer for password change endpoint.
-class ChangePasswordSerializer(serializers.Serializer):
+class ChangePasswordSerializer(serializers.Serializer,):
     model = User
 
     old_password = serializers.CharField(required=True)
