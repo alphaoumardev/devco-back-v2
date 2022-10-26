@@ -2,8 +2,10 @@ from abc import ABC
 
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from rest_framework.fields import SerializerMethodField
 
 from users.models import Profile
+
 
 # User Serializer
 class UserSerializer(serializers.ModelSerializer):
@@ -35,7 +37,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 # Serializer for password change endpoint.
-class ChangePasswordSerializer(serializers.Serializer,):
+class ChangePasswordSerializer(serializers.Serializer, ):
     model = User
 
     old_password = serializers.CharField(required=True)
@@ -47,10 +49,14 @@ class ProfileSerializer(serializers.ModelSerializer):
     my_posts_count = serializers.ReadOnlyField(read_only=True, required=False)
     my_followers_count = serializers.ReadOnlyField(read_only=True, required=False)
     my_following_count = serializers.ReadOnlyField(read_only=True, required=False)
+    # followers_count = SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = '__all__'
+
+    # def get_followers_count(self, obj):
+    #     return obj.followers_count
 
 
 class ProfilePostSerializer(serializers.ModelSerializer):

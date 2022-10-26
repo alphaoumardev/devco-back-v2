@@ -1,4 +1,5 @@
 from django.db.models import Count
+from rest_framework import status
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -17,11 +18,14 @@ def get_topics(request):
         serializer = TopicsCountSerializer(topic, many=True)
         return Response(serializer.data)
     if request.method == 'POST':
-        serializer = TopicsSerializer(data=request.data, many=False)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+        try:
+            serializer = TopicsSerializer(data=request.data, many=False)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["GET", "POST"])

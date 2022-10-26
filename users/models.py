@@ -30,17 +30,17 @@ class Profile(models.Model):
     cover_image = models.ImageField(upload_to="devcom", blank=True)
     bio = models.TextField(blank=True)
     followers = models.ManyToManyField('self', blank=True)
-    # following = models.ManyToManyField('self', blank=True)
 
+    # following = models.ManyToManyField('self', blank=True)
 
     @property
     def my_posts(self):
-        print(self.user.feed_set.all())
-        return self.user.feed_set.all()
+        print(self.feed_set.all())
+        return self.feed_set.all()
 
     @property
     def my_posts_count(self):
-        return self.user.feed_set.count()
+        return self.feed_set.count()
 
     @property
     def my_followers_count(self):
@@ -52,7 +52,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.username
-
 
 # post_save.connect(create_user_profile, sender=User)
 # post_save.connect(save_user_profile, sender=User)

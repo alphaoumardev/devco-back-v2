@@ -1,5 +1,6 @@
 from django.contrib.auth import login
 from django.contrib.auth.models import User
+from django.db.models import Count
 from knox.models import AuthToken
 from knox.views import LoginView as KnoxLoginView
 from rest_framework import generics
@@ -7,7 +8,7 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 from feed.models import Feed
@@ -17,8 +18,7 @@ from .serializer import UserSerializer, RegisterSerializer, ChangePasswordSerial
     ProfilePostSerializer
 
 
-# Register API
-class RegisterAPI(generics.GenericAPIView):
+class RegisterAPI(generics.GenericAPIView):  # Register API
     serializer_class = RegisterSerializer
     permission_classes = (permissions.AllowAny,)
 
@@ -31,17 +31,8 @@ class RegisterAPI(generics.GenericAPIView):
         user_name = User.objects.filter(username=username)
         if users_qs.exists():
             return Response({'A user with this email already exists'})
-        if user_name.exists():
+        elif user_name.exists():
             return Response({'A user with this username already exists'})
-
-        # else:
-        #     return data
-        # if User.objects.filter(email=email).exists():
-        #     messages['errors'].append("Account already exists with this email id.")
-        # if User.objects.filter(username__iexact=username).exists():
-        #     messages['errors'].append("Account already exists with this username.")
-        # if len(messages['errors']) > 0:
-        #     return Response({"detail": messages['errors']}, status=status.HTTP_400_BAD_REQUEST)
         try:
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
@@ -65,10 +56,8 @@ class LoginAPI(KnoxLoginView):
         return super(LoginAPI, self).post(request, format=None)
 
 
-# To change the password
-class ChangePasswordView(generics.UpdateAPIView):
-    # An endpoint for changing password.
-    serializer_class = ChangePasswordSerializer
+class ChangePasswordView(generics.UpdateAPIView):  # To change the password
+    serializer_class = ChangePasswordSerializer  # An endpoint for changing password.
     model = User
     permission_classes = (IsAuthenticated,)
 
@@ -81,11 +70,10 @@ class ChangePasswordView(generics.UpdateAPIView):
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
-            # Check old password
-            if not self.object.check_password(serializer.data.get("old_password")):
+            if not self.object.check_password(serializer.data.get("old_password")):  # Check old password
                 return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
-            # set_password also hashes the password that the user will get
-            self.object.set_password(serializer.data.get("new_password"))
+
+            self.object.set_password(serializer.data.get("new_password"))  # set_password hashes the password
             self.object.save()
             response = {
                 'status': 'success',
@@ -94,7 +82,6 @@ class ChangePasswordView(generics.UpdateAPIView):
                 'data': []
             }
             return Response(response)
-
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -106,62 +93,106 @@ class UserAPI(generics.RetrieveAPIView):
         return self.request.user
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "PATCHT", "DELETE"])
 @permission_classes([IsAuthenticated])
-def get_profile(request):
+def get_my_profile(request):
+    profile = Profile.objects.get(user_id=request.user.id)
+
     if request.method == 'GET':
-        profile = Profile.objects.get(user_id=request.user.id)
-        my_p = Feed.objects.filter(user_id=request.user.id)
-        my = FeedSerializer(my_p, many=True)
+        my_feed = Feed.objects.filter(profile__user_id=request.user.id)
+        mine = FeedSerializer(my_feed, many=True)
         serializer = ProfileSerializer(profile, many=False)
-        return Response({"data": serializer.data, "mypost": my.data})
+        return Response({"data": serializer.data, "my_posts": mine.data})
 
     if request.method == "POST":
-        serializer = ProfilePostSerializer(data=request.data, many=False)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+        try:
+            serializer = ProfilePostSerializer(data=request.data, many=False)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+    if request.method == "PATCHT":
+        try:
+            serializer = ProfilePostSerializer(profile, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+    if request.method == "DELETE":
+        try:
+            profile = Profile.objects.get(user_id=request.user.id)
+            profile.delete()
+            return Response(
+                {"message": "You have successfully deleted your devco account and hope you will return soon",
+                 "status": status.HTTP_204_NO_CONTENT})
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_his_profile(request, pk):
+    if request.method == 'GET':
+        try:
+            profile = Profile.objects.get(user_id=pk)
+            my_feed = Feed.objects.filter(profile__user_id=pk)
+            mine = FeedSerializer(my_feed, many=True)
+            serializer = ProfileSerializer(profile, many=False)
+            return Response({"data": serializer.data, "hispost": mine.data})
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def users_following_me(request, pk):
+def i_follow_profile(request, pk):
     if request.method == "POST":
-        current_profile = Profile.objects.get(user_id=request.user.id)
-        profile_to_follow = Profile.objects.get(user_id=pk)
-        print(current_profile, profile_to_follow)
+        try:
+            current_profile = Profile.objects.get(user_id=request.user.id)
+            other_profiles = Profile.objects.get(user_id=pk)
 
-        if current_profile == profile_to_follow:
-            return Response("You cannot follow youserlf")
-        if profile_to_follow in current_profile.followers.all():
-            current_profile.followers.remove(profile_to_follow)
-            current_profile.save()
-            return Response('unfollowed')
-
-        else:
-            current_profile.followers.add(profile_to_follow)
-            current_profile.save()
-            return Response('followed')
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def i_follow_users(request, pk):
-    if request.method == "POST":
-        # profile_to_follow = get_object_or_404(Profile, user_id=pk)
-        # follows = Profile.objects.all().exclude(user_id=request.user.id)
-
-        profile_to_follow = Profile.objects.get(user_id=pk)
-        currentUser = Profile.objects.get(user_id=request.user.id)
-        my_following_users = profile_to_follow.followers.all()
-
-        if pk != currentUser.user_id:
-            if currentUser in my_following_users:
-                profile_to_follow.followers.remove(currentUser.id)
-
-                return Response('unfollowed')
+            if current_profile == other_profiles:
+                return Response("You cannot follow youserlf")
+            if other_profiles in current_profile.followers.all():
+                current_profile.followers.remove(other_profiles)
+                current_profile.save()
+                return Response('Unfollowed this profile')
 
             else:
-                profile_to_follow.followers.add(currentUser.user_id)
-                return Response('followed')
+                current_profile.followers.add(other_profiles)
+                current_profile.save()
+                return Response('Followed this profile')
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def profile_follow_me(request):
+    if request.method == "GET":
+        try:
+            current_profile = Profile.objects.get(user_id=request.user.id)
+            following = current_profile.followers.all()
+            serializer = ProfileSerializer(following, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_profile_to_follow(request):
+    if request.method == "GET":
+        try:
+            profile_to_follow = Profile.objects.annotate(followers_count=Count('followers')) \
+                                    .order_by('followers_count').reverse().exclude(user=request.user)[:3]
+            serializer = ProfileSerializer(profile_to_follow, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
