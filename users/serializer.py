@@ -49,14 +49,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     my_posts_count = serializers.ReadOnlyField(read_only=True, required=False)
     my_followers_count = serializers.ReadOnlyField(read_only=True, required=False)
     my_following_count = serializers.ReadOnlyField(read_only=True, required=False)
-    # followers_count = SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = '__all__'
-
-    # def get_followers_count(self, obj):
-    #     return obj.followers_count
 
 
 class ProfilePostSerializer(serializers.ModelSerializer):

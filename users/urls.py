@@ -15,6 +15,6 @@ urlpatterns = [
     path('his-profile/<str:pk>', get_his_profile, name='profile'),
     path('follow/<str:pk>', i_follow_profile, name='profile'),
     path('following-me/', profile_follow_me, name="following-me"),
-    path('recommand-profiles/', get_profile_to_follow, name="recommaded-profile"),
+    path('recommanded-profiles/', get_profile_to_follow, name="recommaded-profiles"),
     path('loaduser/', UserAPI.as_view()),
 ]
