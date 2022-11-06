@@ -35,7 +35,6 @@ class Profile(models.Model):
 
     @property
     def my_posts(self):
-        print(self.feed_set.all())
         return self.feed_set.all()
 
     @property

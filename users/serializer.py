@@ -1,8 +1,5 @@
-from abc import ABC
-
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from rest_framework.fields import SerializerMethodField
 
 from users.models import Profile
 

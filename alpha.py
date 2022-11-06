@@ -136,11 +136,9 @@ class AStarPlanner:
     @staticmethod
     def calc_heuristic(n1, n2):
         """计算启发函数
-
         Args:
             n1 (_type_): _description_
             n2 (_type_): _description_
-
         Returns:
             _type_: _description_
         """

@@ -99,7 +99,7 @@ def get_my_profile(request):
     profile = Profile.objects.get(user_id=request.user.id)
 
     if request.method == 'GET':
-        my_feed = Feed.objects.filter(profile__user_id=request.user.id)
+        my_feed = Feed.objects.filter(profile__user_id=request.user.id).order_by('id').reverse()
         mine = FeedSerializer(my_feed, many=True)
         serializer = ProfileSerializer(profile, many=False)
         return Response({"data": serializer.data, "my_posts": mine.data})
@@ -174,12 +174,27 @@ def i_follow_profile(request, pk):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def profile_follow_me(request):
+def profiles_following_me(request):
     if request.method == "GET":
         try:
             current_profile = Profile.objects.get(user_id=request.user.id)
-            following = current_profile.followers.all()
-            serializer = ProfileSerializer(following, many=True)
+            for following in current_profile.followers.all():
+                fo = following.followers.all()
+                serializer = ProfileSerializer(fo, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def profiles_i_follow(request):
+    if request.method == "GET":
+        try:
+            current_profile = Profile.objects.get(user_id=request.user.id)
+            followers = current_profile.followers.all()
+            serializer = ProfileSerializer(followers, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
@@ -193,6 +208,32 @@ def get_profile_to_follow(request):
             profile_to_follow = Profile.objects.annotate(followers_count=Count('followers')) \
                                     .order_by('followers_count').reverse().exclude(user=request.user)[:3]
             serializer = ProfileSerializer(profile_to_follow, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def posts_i_liked(request):
+    if request.method == "GET":
+        try:
+            current_profile = Profile.objects.get(user_id=request.user.id)
+            liked_posts = Feed.objects.filter(likes=current_profile)
+            serializer = FeedSerializer(liked_posts, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def posts_i_saved(request):
+    if request.method == "GET":
+        try:
+            current_profile = Profile.objects.get(user_id=request.user.id)
+            saved_posts = Feed.objects.filter(saves=current_profile)
+            serializer = FeedSerializer(saved_posts, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
