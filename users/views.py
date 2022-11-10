@@ -93,7 +93,7 @@ class UserAPI(generics.RetrieveAPIView):
         return self.request.user
 
 
-@api_view(["GET", "POST", "PATCHT", "DELETE"])
+@api_view(["GET", "POST", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def get_my_profile(request):
     profile = Profile.objects.get(user_id=request.user.id)
@@ -114,10 +114,17 @@ def get_my_profile(request):
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
-    if request.method == "PATCHT":
+    if request.method == "PATCH":
         try:
+            # new_user = User.objects.filter(id=profile).update_or_create(username=request.GET.get('username'),
+            #                                                             email=request.GET.get('email'))
+            the_user = User.objects.get(id=profile.user.id)
             serializer = ProfilePostSerializer(profile, data=request.data)
             if serializer.is_valid():
+                """TO update the user simultaneously"""
+                new_user = UserSerializer(the_user, data=request.data)
+                if new_user.is_valid():
+                    new_user.save()
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors)
@@ -140,11 +147,11 @@ def get_my_profile(request):
 def get_his_profile(request, pk):
     if request.method == 'GET':
         try:
-            profile = Profile.objects.get(user_id=pk)
-            my_feed = Feed.objects.filter(profile__user_id=pk)
-            mine = FeedSerializer(my_feed, many=True)
+            profile = Profile.objects.get(id=pk)
+            his_feed = Feed.objects.filter(profile_id=pk)
+            mine = FeedSerializer(his_feed, many=True)
             serializer = ProfileSerializer(profile, many=False)
-            return Response({"data": serializer.data, "hispost": mine.data})
+            return Response({"data": serializer.data, "hisposts": mine.data})
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
@@ -152,21 +159,38 @@ def get_his_profile(request, pk):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def i_follow_profile(request, pk):
+    pass
     if request.method == "POST":
         try:
-            current_profile = Profile.objects.get(user_id=request.user.id)
-            other_profiles = Profile.objects.get(user_id=pk)
+            current_profile = Profile.objects.get(user=request.user)
+            profile_to_follow = Profile.objects.get(id=pk)
 
-            if current_profile == other_profiles:
+            # current_profile.following.remove(profile_to_follow)
+            # current_profile.followedby.remove(profile_to_follow)
+
+            # profile_to_follow.followedby.remove(current_profile)
+            # profile_to_follow.following.remove(current_profile)
+            # current_profile.save()
+            # profile_to_follow.save()
+            # return Response('Y')
+
+            if current_profile == profile_to_follow:
                 return Response("You cannot follow youserlf")
-            if other_profiles in current_profile.followers.all():
-                current_profile.followers.remove(other_profiles)
+            if profile_to_follow in current_profile.following.all():
+                current_profile.following.remove(profile_to_follow)
                 current_profile.save()
+
+                profile_to_follow.followedby.remove(current_profile)
+                profile_to_follow.save()
                 return Response('Unfollowed this profile')
 
             else:
-                current_profile.followers.add(other_profiles)
+                current_profile.following.add(profile_to_follow)
                 current_profile.save()
+
+                profile_to_follow.followedby.add(current_profile)
+                profile_to_follow.save()
+
                 return Response('Followed this profile')
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
@@ -177,12 +201,10 @@ def i_follow_profile(request, pk):
 def profiles_following_me(request):
     if request.method == "GET":
         try:
-            current_profile = Profile.objects.get(user_id=request.user.id)
-            for following in current_profile.followers.all():
-                fo = following.followers.all()
-                serializer = ProfileSerializer(fo, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            current_profile = Profile.objects.get(user=request.user)
+            followedby = current_profile.followedby.all()
+            serializer = ProfileSerializer(followedby, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
@@ -192,9 +214,9 @@ def profiles_following_me(request):
 def profiles_i_follow(request):
     if request.method == "GET":
         try:
-            current_profile = Profile.objects.get(user_id=request.user.id)
-            followers = current_profile.followers.all()
-            serializer = ProfileSerializer(followers, many=True)
+            current_profile = Profile.objects.get(user=request.user)
+            following = current_profile.following.all()
+            serializer = ProfileSerializer(following, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
@@ -205,8 +227,8 @@ def profiles_i_follow(request):
 def get_profile_to_follow(request):
     if request.method == "GET":
         try:
-            profile_to_follow = Profile.objects.annotate(followers_count=Count('followers')) \
-                                    .order_by('followers_count').reverse().exclude(user=request.user)[:3]
+            profile_to_follow = Profile.objects.annotate(following_count=Count('following')) \
+                                    .order_by('following_count').reverse().exclude(user=request.user)[:3]
             serializer = ProfileSerializer(profile_to_follow, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:

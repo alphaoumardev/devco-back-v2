@@ -44,8 +44,8 @@ class ChangePasswordSerializer(serializers.Serializer, ):
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(required=False, read_only=True)
     my_posts_count = serializers.ReadOnlyField(read_only=True, required=False)
-    my_followers_count = serializers.ReadOnlyField(read_only=True, required=False)
-    my_following_count = serializers.ReadOnlyField(read_only=True, required=False)
+    following_count = serializers.ReadOnlyField(read_only=True, required=False)
+    followedby_count = serializers.ReadOnlyField(read_only=True, required=False)
 
     class Meta:
         model = Profile

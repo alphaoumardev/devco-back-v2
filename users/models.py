@@ -29,9 +29,8 @@ class Profile(models.Model):
     avatar = models.ImageField(upload_to="devcom", blank=True)
     cover_image = models.ImageField(upload_to="devcom", blank=True)
     bio = models.TextField(blank=True)
-    followers = models.ManyToManyField('self', blank=True)
-
-    # following = models.ManyToManyField('self', blank=True)
+    following = models.ManyToManyField('self', blank=True, symmetrical=False)
+    followedby = models.ManyToManyField('self', blank=True, symmetrical=False, related_name="followed_by")
 
     @property
     def my_posts(self):
@@ -42,12 +41,12 @@ class Profile(models.Model):
         return self.feed_set.count()
 
     @property
-    def my_followers_count(self):
-        return self.followers.count()
+    def followedby_count(self):
+        return self.followedby.count()
 
-    # @property
-    # def my_following_count(self):
-    #     return self.following.count()
+    @property
+    def following_count(self):
+        return self.following.count()
 
     def __str__(self):
         return self.user.username

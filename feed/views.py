@@ -51,7 +51,12 @@ def get_one_feed(request, pk):
         feed.views += 1
         feed.save()
         serializer = FeedSerializer(feed, many=False)
-        return Response({"data": serializer.data, "comments": comment.data})
+
+        recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').reverse()[:3]
+        recent_p_seriliazer = FeedSerializer(recent_posts, many=True)
+
+        return Response({"data": serializer.data, "comments": comment.data,
+                         "recent_posts": recent_p_seriliazer.data})
 
     if request.method == "POST":  # to reply
         try:
