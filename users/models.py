@@ -45,7 +45,7 @@ class Profile(models.Model):
         return self.followedby.count()
 
     @property
-    def following_count(self):
+    def follow_count(self):
         return self.following.count()
 
     def __str__(self):

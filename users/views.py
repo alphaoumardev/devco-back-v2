@@ -149,9 +149,22 @@ def get_his_profile(request, pk):
         try:
             profile = Profile.objects.get(id=pk)
             his_feed = Feed.objects.filter(profile_id=pk)
-            mine = FeedSerializer(his_feed, many=True)
+            """to get his profile and posts"""
+            his_posts = FeedSerializer(his_feed, many=True)
             serializer = ProfileSerializer(profile, many=False)
-            return Response({"data": serializer.data, "hisposts": mine.data})
+            """to get his followers"""
+            followedby = profile.followedby.all()
+            by_serializer = ProfileSerializer(followedby, many=True)
+            """to get his following"""
+            following = profile.following.all()
+            following_serializer = ProfileSerializer(following, many=True)
+
+            return Response({
+                            "data": serializer.data,
+                            "hisposts": his_posts.data,
+                            "hisfollowers": by_serializer.data,
+                            "hisfollowing": following_serializer.data
+                            }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
@@ -164,7 +177,6 @@ def i_follow_profile(request, pk):
         try:
             current_profile = Profile.objects.get(user=request.user)
             profile_to_follow = Profile.objects.get(id=pk)
-
             # current_profile.following.remove(profile_to_follow)
             # current_profile.followedby.remove(profile_to_follow)
 
