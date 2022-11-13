@@ -52,7 +52,7 @@ def get_one_feed(request, pk):
         feed.save()
         serializer = FeedSerializer(feed, many=False)
 
-        recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').reverse()[:3]
+        recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').exclude(id=feed.id).reverse()[:3]
         recent_p_seriliazer = FeedSerializer(recent_posts, many=True)
 
         return Response({"data": serializer.data, "comments": comment.data,

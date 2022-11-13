@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.db import models
 from django.urls import reverse
@@ -26,8 +25,8 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
-    avatar = models.ImageField(upload_to="devcom", blank=True)
-    cover_image = models.ImageField(upload_to="devcom", blank=True)
+    avatar = models.ImageField(upload_to="devcom", blank=True, default="https://res.cloudinary.com/diallo/image/upload/v1647154137/8_fncc3c.jpg")
+    cover_image = models.ImageField(upload_to="devcom", blank=True, default="https://res.cloudinary.com/diallo/image/upload/v1647154140/4-big_sd6hps.jpg")
     bio = models.TextField(blank=True)
     following = models.ManyToManyField('self', blank=True, symmetrical=False)
     followedby = models.ManyToManyField('self', blank=True, symmetrical=False, related_name="followed_by")
