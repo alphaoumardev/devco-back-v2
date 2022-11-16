@@ -1,16 +1,23 @@
 from django.db.models import Q, Count
 from rest_framework import status
 from rest_framework.decorators import permission_classes, api_view
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import get_object_or_404, RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from feed.models import Feed
-from feed.models import Replies
-from feed.serializer import FeedsSerializer, RepliePostSerializer, FeedSerializer
-from feed.serializer import ReplieSerializer
+from feed.models import Feed, Comments
+from feed.serializer import FeedsPostSerializer, CommentsPostSerializer, FeedSerializer,  CommentsSerializer
 from topics.models import Topics
 from users.models import Profile
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def get_comments(request, pk):
+    if request.method == 'GET':
+        comments = Comments.objects.filter(post=pk, parent__comment=None)
+        comment = CommentsSerializer(comments, many=True)
+        return Response(comment.data)
 
 
 @api_view(["GET", "POST"])
@@ -31,7 +38,7 @@ def get_feeds(request):
 
     if request.method == 'POST':
         try:
-            serializer = FeedsSerializer(data=request.data, many=False)
+            serializer = FeedsPostSerializer(data=request.data, many=False)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
@@ -44,8 +51,8 @@ def get_feeds(request):
 @permission_classes([AllowAny])
 def get_one_feed(request, pk):
     if request.method == 'GET':
-        comments = Replies.objects.filter(post=pk)
-        comment = ReplieSerializer(comments, many=True)  # get comments of this post
+        # comments = Comments.objects.filter(post=pk)
+        # comment = CommentsSerializer(comments, many=True)  # get comments of this post
 
         feed = Feed.objects.get(id=pk)
         feed.views += 1
@@ -54,13 +61,24 @@ def get_one_feed(request, pk):
 
         recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').exclude(id=feed.id).reverse()[:3]
         recent_p_seriliazer = FeedSerializer(recent_posts, many=True)
+        """To Jenny"""
+        print('\n'.join
+              ([''.join
+                ([('Jenny'[(x - y) % 5]
+                   if ((x * 0.05) ** 2 + (y * 0.1) ** 2 - 1)
+                      ** 3 - (x * 0.05) ** 2 * (y * 0.1)
+                      ** 3 <= 0 else ' ')
+                  for x in range(-30, 30)])
+                for y in range(15, -15, -1)]))
 
-        return Response({"data": serializer.data, "comments": comment.data,
-                         "recent_posts": recent_p_seriliazer.data})
+        return Response({"data": serializer.data,
+                         # "comments": comments.data,
+                         "recent_posts": recent_p_seriliazer.data
+                         })
 
     if request.method == "POST":  # to reply
         try:
-            serializer = RepliePostSerializer(data=request.data, many=False)
+            serializer = CommentsPostSerializer(data=request.data, many=False)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -75,7 +93,7 @@ def edit_my_posts(request, pk):
     feed = Feed.objects.get(id=pk, profile__user_id=request.user.id)
     if request.method == "PATCH":
         try:
-            serializer = FeedsSerializer(feed, data=request.data)
+            serializer = FeedsPostSerializer(feed, data=request.data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)

@@ -50,6 +50,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = '__all__'
+        depth = 1
 
 
 class ProfilePostSerializer(serializers.ModelSerializer):

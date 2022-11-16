@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from feed.models import Feed, Replies
+from feed.models import Feed, Comments
 
 # Register your models here.
 admin.site.register(Feed)
-admin.site.register(Replies)
+admin.site.register(Comments)

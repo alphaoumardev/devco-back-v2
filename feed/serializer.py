@@ -1,48 +1,73 @@
+
 from rest_framework import serializers
-from feed.models import Feed, Replies
+from rest_framework.fields import SerializerMethodField
+
+from feed.models import Feed, Comments
 from topics.serializers import TopicsSerializer
-from users.serializer import ProfileSerializer
+from users.models import Profile
+from users.serializer import UserSerializer
 
 
-class FeedsSerializer(serializers.ModelSerializer):
+class CommentatorSerializer(serializers.ModelSerializer):
+    user = UserSerializer(required=False, read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ["id", "avatar", "user"]
+
+
+class CommentsPostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comments
+        fields = '__all__'
+
+
+class FeedsPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feed
         fields = "__all__"
 
 
+class CommentsSerializer(serializers.ModelSerializer):
+    commentator = CommentatorSerializer(required=False, read_only=True)
+    reply_count = SerializerMethodField()
+
+    class Meta:
+        model = Comments
+        fields = "__all__"
+
+    def get_fields(self):
+        fields = super(CommentsSerializer, self).get_fields()
+        fields['subcomments'] = CommentsSerializer(many=True)
+        return fields
+
+    @staticmethod
+    def get_reply_count(obj):
+        if obj.is_parent:
+            return obj.children().count()
+        return obj.subcomments.count()
+
+    """
+    A another way to get replies
+    @staticmethod
+    def get_parent(obj):
+        if obj.parent is not None:
+            return CommentsSerializer(obj.parent).data
+        else:
+            return None
+    """
+
+
 class FeedSerializer(serializers.ModelSerializer):
     topic = TopicsSerializer(required=False, read_only=True)
-    profile = ProfileSerializer(required=False, read_only=True)
+    profile = CommentatorSerializer(required=False, read_only=True)
     num_likes = serializers.ReadOnlyField(read_only=True, required=False)
     num_replies = serializers.ReadOnlyField(read_only=True, required=False)
     num_saves = serializers.ReadOnlyField(read_only=True, required=False)
+    replies = CommentsSerializer(many=True, read_only=True)
+
+    # recent_post = serializers.SerializerMethodField()
 
     class Meta:
         model = Feed
-        fields = '__all__'
-
-
-class FeedCountSerializer(serializers.ModelSerializer):
-    topic = TopicsSerializer(required=False, read_only=True)
-    topic_count = serializers.IntegerField()
-
-    def get_topic_count(self, obj):
-        return obj.topic_count.count()
-
-    class Meta:
-        model = Feed
-        fields = '__all__'
-
-
-class ReplieSerializer(serializers.ModelSerializer):
-    commentator = ProfileSerializer(required=False, read_only=True)
-
-    class Meta:
-        model = Replies
-        fields = '__all__'
-
-
-class RepliePostSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Replies
         fields = '__all__'

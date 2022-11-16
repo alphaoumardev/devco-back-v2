@@ -1,4 +1,3 @@
-from django.test import TestCase
 from rest_framework.authtoken.admin import User
 import numpy as np
 
@@ -45,5 +44,83 @@ def trendingpostfunction():
     trendlist = []
     for k in trend.keys():
         trendlist.append(k)
-    #print('trendlist --', trendlist)
+    # print('trendlist --', trendlist)
     return trendlist
+
+
+"""
+class CommentsSerializer(serializers.ModelSerializer):
+    commentator = ProfileSerializer(required=False, read_only=True)
+
+    class Meta:
+        model = Comments
+        fields = '__all__'
+        depth = 3
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    reply_count = SerializerMethodField()
+
+    class Meta:
+        model = Comments
+        fields = "__all__"
+        # fields = [
+        #     'id',
+        #     'post',
+        #     'commentator',
+        #     'parent',
+        #     'comment',
+        #     'reply_count',
+        #     'liking',
+        #     'commentated',
+        # ]
+
+    @staticmethod
+    def get_reply_count(obj):
+        if obj.is_parent:
+            return obj.children().count()
+        return 0
+
+
+class CommentChildSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comments
+        fields = [
+            'id',
+            'parent',
+            'commentator',
+            'comment',
+            'timestamp',
+        ]
+
+
+class CommentDetailSerializer(serializers.ModelSerializer):
+    reply_count = SerializerMethodField()
+    replie = SerializerMethodField()
+
+    class Meta:
+        model = Comments
+        fields = [
+            'id',
+            'post',
+            'parent',
+            'commentator',
+            'comment',
+            'timestamp',
+            'reply_count',
+            'replie',
+        ]
+
+    @staticmethod
+    def get_replie(obj):
+        if obj.is_parent:
+            return CommentChildSerializer(obj.children(), many=True).data
+        return None
+
+    @staticmethod
+    def get_reply_count(obj):
+        if obj.is_parent:
+            return obj.children().count()
+        return 0
+
+"""

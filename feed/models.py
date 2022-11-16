@@ -10,7 +10,7 @@ class Feed(models.Model):
     topic = models.ForeignKey(Topics, on_delete=models.CASCADE, related_name="topic", null=True, blank=True)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True)
     posted = models.DateTimeField(auto_now_add=True, null=True)
-    cover_image = models.ImageField(upload_to='devcom', null=True, blank=True,)
+    cover_image = models.ImageField(upload_to='devcom', null=True, blank=True, )
     likes = models.ManyToManyField(Profile, related_name="related_like", blank=True)
     saves = models.ManyToManyField(Profile, related_name="related_save", blank=True)
     views = models.IntegerField(default=0)
@@ -28,15 +28,26 @@ class Feed(models.Model):
 
     @property
     def num_replies(self):
-        return self.replies_set.count()
+        return self.comments_set.count()
+
+    @property
+    def replies(self):
+        return self.comments_set.filter(parent__comment=None)
 
 
-class Replies(models.Model):
+class Comments(models.Model):
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name="subcomments", null=True, blank=True)
     post = models.ForeignKey(Feed, on_delete=models.CASCADE, null=True, blank=True)
-    comment = models.CharField(max_length=2000)
-    like = models.IntegerField(null=True, blank=True)
     commentator = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True, )
-    commentated = models.DateTimeField(auto_now_add=True, null=True)
+    liking = models.ManyToManyField(Profile, related_name="like_reply", blank=True)
+    comment = models.CharField(max_length=2000)
+    timestamp = models.DateTimeField(auto_now_add=True, null=True)
 
-    class Meta:
-        ordering = ['-like']
+    def children(self):  # replies
+        return Comments.objects.filter(parent=self)
+
+    @property
+    def is_parent(self):
+        if self.parent is not None:
+            return False
+        return True

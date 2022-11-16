@@ -13,7 +13,8 @@ class TopicsSerializer(serializers.ModelSerializer):
 class TopicsCountSerializer(serializers.ModelSerializer):
     post_count = SerializerMethodField()
 
-    def get_post_count(self, obj):
+    @staticmethod
+    def get_post_count(obj):
         return obj.post_count
 
     class Meta:
