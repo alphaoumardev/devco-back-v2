@@ -1,6 +1,6 @@
 from django.urls import path
 from feed.views import get_feeds, get_feed_by_topic, like_one_feed, get_one_feed, save_one_feed, get_trending_feed, \
-    edit_my_posts, get_comments
+    edit_my_posts, get_comments, like_comments
 
 urlpatterns = [
     path('feeds/', get_feeds, name='feeds'),
@@ -12,4 +12,5 @@ urlpatterns = [
 
     path('com/<pk>', get_comments, name="com"),
     path('edit-my-post/<str:pk>', edit_my_posts, name='edit-my-post'),
+    path('like-comment/<str:pk>', like_comments, name='like-comments')
 ]

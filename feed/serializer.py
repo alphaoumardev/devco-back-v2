@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 
@@ -31,6 +30,7 @@ class FeedsPostSerializer(serializers.ModelSerializer):
 class CommentsSerializer(serializers.ModelSerializer):
     commentator = CommentatorSerializer(required=False, read_only=True)
     reply_count = SerializerMethodField()
+    like_count = serializers.ReadOnlyField(required=False, read_only=True)
 
     class Meta:
         model = Comments
@@ -65,9 +65,16 @@ class FeedSerializer(serializers.ModelSerializer):
     num_replies = serializers.ReadOnlyField(read_only=True, required=False)
     num_saves = serializers.ReadOnlyField(read_only=True, required=False)
     replies = CommentsSerializer(many=True, read_only=True)
-
+    # l_count = serializers.SerializerMethodField()
     # recent_post = serializers.SerializerMethodField()
 
     class Meta:
         model = Feed
         fields = '__all__'
+
+    # @staticmethod
+    # @property
+    # def get_l_count(self):
+    #     c = Comments.objects.all()
+    #         c.+ self.num_likes
+    #     return c

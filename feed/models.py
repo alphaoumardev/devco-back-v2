@@ -43,6 +43,9 @@ class Comments(models.Model):
     comment = models.CharField(max_length=2000)
     timestamp = models.DateTimeField(auto_now_add=True, null=True)
 
+    def __str__(self):
+        return self.comment
+
     def children(self):  # replies
         return Comments.objects.filter(parent=self)
 
@@ -51,3 +54,7 @@ class Comments(models.Model):
         if self.parent is not None:
             return False
         return True
+
+    @property
+    def like_count(self):
+        return self.liking.count()

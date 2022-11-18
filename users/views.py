@@ -269,7 +269,7 @@ def get_profile_to_follow(request):
             profile_to_follow = Profile.objects \
                                     .annotate(following_count=Count('following')).order_by('following_count') \
                                     .reverse().exclude(user=request.user) \
-                                    .exclude(profile__following__in=following)[:4]
+                                    .exclude(profile__following__in=following)
             serializer = ProfileSerializer(profile_to_follow, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:

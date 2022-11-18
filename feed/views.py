@@ -15,7 +15,12 @@ from users.models import Profile
 @permission_classes([AllowAny])
 def get_comments(request, pk):
     if request.method == 'GET':
-        comments = Comments.objects.filter(post=pk, parent__comment=None)
+        comments = Comments.objects.filter(post=pk,)
+        su = 0
+        for i in comments.all():
+            su += i.liking.count()
+
+            print(su)
         comment = CommentsSerializer(comments, many=True)
         return Response(comment.data)
 
@@ -172,5 +177,25 @@ def get_trending_feed(request):
             feed = Feed.objects.annotate(Count('views')).order_by('-views')[:4]
             serializer = FeedSerializer(feed, many=True)
             return Response(serializer.data)
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def like_comments(request, pk):
+    current_profile = Profile.objects.get(user=request.user)
+    if request.method == "POST":
+        try:
+            like_comment = get_object_or_404(Comments, id=pk)
+            if like_comment.liking.filter(user_id=request.user.id).exists():
+                like_comment.liking.remove(current_profile)
+                like_comment.save()
+                return Response("unliked")
+
+            else:
+                like_comment.liking.add(current_profile)
+                like_comment.save()
+                return Response("liked")
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
