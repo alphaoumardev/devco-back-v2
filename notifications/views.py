@@ -19,7 +19,7 @@ def get_notifications(request, ):
 
     if request.method == 'GET':
         try:
-            notifications = Notifications.objects.filter(to_profile=current_profile)
+            notifications = Notifications.objects.filter(to_profile=current_profile).order_by('id').reverse()
             serializer = NotificationSerializer(notifications, many=True)
             return Response(serializer.data)
         except Exception as e:

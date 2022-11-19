@@ -233,7 +233,7 @@ def i_follow_profile(request, pk):
                     from_profile=current_profile,
                     to_profile=profile_to_follow,
                     notification_type='new_follower',
-                    content=f"{current_profile.user.username} started following you"
+                    content=f"started following you"
                 )
                 return Response('Followed this profile')
         except Exception as e:

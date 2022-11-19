@@ -52,7 +52,7 @@ def get_feeds(request):
                         to_profile=follower,
                         notification_type='new_post',
                         # new_post=serializer.data,
-                        content=f"{current_profile.user.username} recently has posted"
+                        content=f"has recently has posted a new article"
                     )
                 return Response(serializer.data)
             return Response(serializer.errors)
@@ -109,7 +109,7 @@ def get_one_feed(request, pk):
                         notification_type='new_comment',
                         new_post=feed,
                         # new_comment=Comments.objects.get(commentator=current_profile, post=feed).last(),
-                        content=f"{current_profile.user.username} has replied your post"
+                        content=f"has replied your post: {feed.title}"
                     )
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
