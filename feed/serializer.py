@@ -12,7 +12,8 @@ class CommentatorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ["id", "avatar", "user"]
+        # fields = "__all__"
+        fields = ["id", "avatar", "user", "following", "followedby", "bio", "followedby_count", "follow_count", 'my_posts_count']
 
 
 class CommentsPostSerializer(serializers.ModelSerializer):
@@ -65,6 +66,7 @@ class FeedSerializer(serializers.ModelSerializer):
     num_replies = serializers.ReadOnlyField(read_only=True, required=False)
     num_saves = serializers.ReadOnlyField(read_only=True, required=False)
     replies = CommentsSerializer(many=True, read_only=True)
+
     # l_count = serializers.SerializerMethodField()
     # recent_post = serializers.SerializerMethodField()
 
@@ -74,7 +76,7 @@ class FeedSerializer(serializers.ModelSerializer):
 
     # @staticmethod
     # @property
-    # def get_l_count(self):
-    #     c = Comments.objects.all()
-    #         c.+ self.num_likes
+    # def get_l_count(self, pk):
+    #     comments = Comments.objects.filter(post=pk,)
+    #         c= self.num_likes
     #     return c

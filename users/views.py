@@ -16,6 +16,7 @@ from feed.serializer import FeedSerializer
 from .models import Profile
 from .serializer import UserSerializer, RegisterSerializer, ChangePasswordSerializer, ProfileSerializer, \
     ProfilePostSerializer
+from notifications.models import Notifications
 
 
 class RegisterAPI(generics.GenericAPIView):  # Register API
@@ -227,6 +228,13 @@ def i_follow_profile(request, pk):
                 profile_to_follow.followedby.add(current_profile)
                 profile_to_follow.save()
 
+                """creating and sending him a notification when you follow him """
+                Notifications.objects.create(
+                    from_profile=current_profile,
+                    to_profile=profile_to_follow,
+                    notification_type='new_follower',
+                    content=f"{current_profile.user.username} started following you"
+                )
                 return Response('Followed this profile')
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
@@ -263,13 +271,14 @@ def profiles_i_follow(request):
 def get_profile_to_follow(request):
     if request.method == "GET":
         try:
-            profiles = Profile.objects.get(user=request.user)
-            following = profiles.following.all()
-            """recommand profiles to follow"""
-            profile_to_follow = Profile.objects \
-                                    .annotate(following_count=Count('following')).order_by('following_count') \
+            current_profile = Profile.objects.get(user=request.user)
+            following = current_profile.following.all()
+            """recommended profiles to follow"""
+            profile_to_follow = Profile.objects\
+                                    .annotate(following_count=Count('following'))\
+                                    .order_by('following_count') \
                                     .reverse().exclude(user=request.user) \
-                                    .exclude(profile__following__in=following)
+                                    .exclude(profile__following__in=following)[:5]
             serializer = ProfileSerializer(profile_to_follow, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:

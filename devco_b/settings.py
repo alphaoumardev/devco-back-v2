@@ -41,10 +41,12 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'knox',
     'django_rest_passwordreset',
-
+    'ckeditor',
+    'ckeditor_demo',
     'feed.apps.FeedConfig',
     'topics.apps.TopicsConfig',
     'users.apps.UsersConfig',
+    'notifications.apps.NotificationsConfig',
 ]
 
 MIDDLEWARE = [
@@ -158,7 +160,8 @@ USE_TZ = True
 
 STATIC_URL = '/assets/'
 MEDIA_ROOT = BASE_DIR / 'assets/'
-
+CKEDITOR_BASEPATH = "/assets/"
+CKEDITOR_UPLOAD_PATH = "/assets/"
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 

@@ -2,32 +2,30 @@ from django.db.models import Q, Count
 from rest_framework import status
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.generics import get_object_or_404, RetrieveAPIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from feed.models import Feed, Comments
 from feed.serializer import FeedsPostSerializer, CommentsPostSerializer, FeedSerializer,  CommentsSerializer
 from topics.models import Topics
 from users.models import Profile
+from notifications.models import Notifications
 
 
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_comments(request, pk):
     if request.method == 'GET':
-        comments = Comments.objects.filter(post=pk,)
-        su = 0
-        for i in comments.all():
-            su += i.liking.count()
-
-            print(su)
+        comments = Comments.objects.filter(post=pk,).annotate(num_liking=Count("liking"))
         comment = CommentsSerializer(comments, many=True)
         return Response(comment.data)
 
 
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_feeds(request):
+    current_profile = Profile.objects.get(user_id=request.user.id)
+    followedby = current_profile.followedby.all()
     if request.method == 'GET':
         try:
             query = request.GET.get('query') if request.GET.get('query') is not None else ''
@@ -40,12 +38,22 @@ def get_feeds(request):
             return Response(serializer.data)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
-
     if request.method == 'POST':
         try:
             serializer = FeedsPostSerializer(data=request.data, many=False)
             if serializer.is_valid():
                 serializer.save()
+
+                """To send a Notification when a following profile posts"""
+                for follower in followedby.all():
+                    print(follower.id)
+                    Notifications.objects.create(
+                        from_profile=current_profile,
+                        to_profile=follower,
+                        notification_type='new_post',
+                        # new_post=serializer.data,
+                        content=f"{current_profile.user.username} recently has posted"
+                    )
                 return Response(serializer.data)
             return Response(serializer.errors)
         except Exception as e:
@@ -53,39 +61,57 @@ def get_feeds(request):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_one_feed(request, pk):
+    current_profile = Profile.objects.get(user_id=request.user.id)
+    feed = Feed.objects.get(id=pk)
+
     if request.method == 'GET':
-        # comments = Comments.objects.filter(post=pk)
-        # comment = CommentsSerializer(comments, many=True)  # get comments of this post
+        try:
+            feed.views += 1
+            feed.save()
+            serializer = FeedSerializer(feed, many=False)
 
-        feed = Feed.objects.get(id=pk)
-        feed.views += 1
-        feed.save()
-        serializer = FeedSerializer(feed, many=False)
-
-        recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').exclude(id=feed.id).reverse()[:3]
-        recent_p_seriliazer = FeedSerializer(recent_posts, many=True)
-        """To Jenny"""
-        print('\n'.join
-              ([''.join
-                ([('Jenny'[(x - y) % 5]
-                   if ((x * 0.05) ** 2 + (y * 0.1) ** 2 - 1)
-                      ** 3 - (x * 0.05) ** 2 * (y * 0.1)
-                      ** 3 <= 0 else ' ')
-                  for x in range(-30, 30)])
-                for y in range(15, -15, -1)]))
-
-        return Response({"data": serializer.data,
-                         # "comments": comments.data,
-                         "recent_posts": recent_p_seriliazer.data
-                         })
+            recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').exclude(id=feed.id).reverse()[:3]
+            recent_p_seriliazer = FeedSerializer(recent_posts, many=True)
+            """To Jenny"""
+            # print('\n'.join
+            #       ([''.join
+            #         ([('Jenny'[(x - y) % 5]
+            #            if ((x * 0.05) ** 2 + (y * 0.1) ** 2 - 1)
+            #               ** 3 - (x * 0.05) ** 2 * (y * 0.1)
+            #               ** 3 <= 0 else ' ')
+            #           for x in range(-30, 30)])
+            #         for y in range(15, -15, -1)]))
+            return Response({"data": serializer.data, "recent_posts": recent_p_seriliazer.data})
+        except Exception as e:
+            return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
     if request.method == "POST":  # to reply
+        the_profile_to = {}
         try:
             serializer = CommentsPostSerializer(data=request.data, many=False)
             if serializer.is_valid():
                 serializer.save()
+                # define it here!
+                the_profile_to = None
+                if request.data['parent'] is not None:
+                    the_profile_to = request.data['commentator']
+                else:
+                    the_profile_to = feed.profile
+                print(the_profile_to)
+                if the_profile_to == current_profile:
+                    the_profile_to = None
+                if the_profile_to is not None:
+                    Notifications.objects.create(
+                        from_profile=current_profile,
+                        to_profile=the_profile_to,
+                        notification_type='new_comment',
+                        new_post=feed,
+                        # new_comment=Comments.objects.get(commentator=current_profile, post=feed).last(),
+                        content=f"{current_profile.user.username} has replied your post"
+                    )
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
@@ -117,7 +143,7 @@ def edit_my_posts(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_feed_by_topic(request, pk):
     if request.method == 'GET':
         try:
@@ -170,7 +196,7 @@ def save_one_feed(request, pk):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_trending_feed(request):
     if request.method == 'GET':
         try:

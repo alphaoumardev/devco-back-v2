@@ -1,11 +1,13 @@
 from django.db import models
 from topics.models import Topics
 from users.models import Profile
+from ckeditor.fields import RichTextField
 
 
 class Feed(models.Model):
     title = models.CharField(max_length=100)
-    content = models.CharField(max_length=10000, null=False)
+    # content = models.CharField(max_length=10000, null=False)
+    content = RichTextField()
     shares = models.IntegerField(null=True, blank=True)
     topic = models.ForeignKey(Topics, on_delete=models.CASCADE, related_name="topic", null=True, blank=True)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True)
