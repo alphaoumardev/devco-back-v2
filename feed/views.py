@@ -1,7 +1,7 @@
 from django.db.models import Q, Count
 from rest_framework import status
 from rest_framework.decorators import permission_classes, api_view
-from rest_framework.generics import get_object_or_404, RetrieveAPIView
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -24,17 +24,54 @@ def get_comments(request, pk):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def get_feeds(request):
+    moi = request.user
     current_profile = Profile.objects.get(user_id=request.user.id)
-    followedby = current_profile.followedby.all()
+    followedby = current_profile.following.all()
+    followers = [i.user.id for i in followedby]
+    followers.append(moi.id)
+    query = request.GET.get('query') if request.GET.get('query') is not None else ''
+
     if request.method == 'GET':
         try:
-            query = request.GET.get('query') if request.GET.get('query') is not None else ''
-            feeds = Feed.objects.filter(
+            # feeds = Feed.objects.filter(
+            #     Q(topic__name=query) |
+            #     Q(title__contains=query) |
+            #     Q(content__contains=query) |
+            #     Q(title__exact=query)).order_by("-id")
+
+            cons = list(Feed.objects.filter(profile__user_id__in=followers).filter(
                 Q(topic__name=query) |
                 Q(title__contains=query) |
                 Q(content__contains=query) |
-                Q(title__exact=query)).order_by("-id")
-            serializer = FeedSerializer(feeds, many=True)
+                Q(title__exact=query)
+            ).order_by('-posted'))[:3]
+
+            recent_cons = Feed.objects.filter(
+                Q(topic__name=query) |
+                Q(title__contains=query) |
+                Q(content__contains=query) |
+                Q(title__exact=query)
+            ).order_by('-posted')
+
+            top_cons = Feed.objects.filter(
+                Q(topic__name=query) |
+                Q(title__contains=query) |
+                Q(content__contains=query) |
+                Q(title__exact=query)
+            ).order_by('-views', '-posted')
+
+            """Adding rencent top feed to the feed list"""
+            index = 0
+            for con in recent_cons:
+                if con not in cons:
+                    cons.insert(index, con)
+                    index += 1
+
+            for con in top_cons:
+                if con not in cons:
+                    cons.append(con)
+
+            serializer = FeedSerializer(cons, many=True)
             return Response(serializer.data)
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
@@ -46,12 +83,11 @@ def get_feeds(request):
 
                 """To send a Notification when a following profile posts"""
                 for follower in followedby.all():
-                    print(follower.id)
                     Notifications.objects.create(
                         from_profile=current_profile,
                         to_profile=follower,
                         notification_type='new_post',
-                        # new_post=serializer.data,
+                        # new_post=Feed.objects.get(profile__feed=current_profile),
                         content=f"has recently has posted a new article"
                     )
                 return Response(serializer.data)
@@ -88,18 +124,17 @@ def get_one_feed(request, pk):
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)
 
     if request.method == "POST":  # to reply
-        the_profile_to = {}
+
         try:
             serializer = CommentsPostSerializer(data=request.data, many=False)
             if serializer.is_valid():
                 serializer.save()
                 # define it here!
-                the_profile_to = None
                 if request.data['parent'] is not None:
                     the_profile_to = request.data['commentator']
                 else:
                     the_profile_to = feed.profile
-                print(the_profile_to)
+                # print(the_profile_to)
                 if the_profile_to == current_profile:
                     the_profile_to = None
                 if the_profile_to is not None:
@@ -200,7 +235,7 @@ def save_one_feed(request, pk):
 def get_trending_feed(request):
     if request.method == 'GET':
         try:
-            feed = Feed.objects.annotate(Count('views')).order_by('-views')[:4]
+            feed = Feed.objects.annotate(Count('views')).order_by('-views')[:8]
             serializer = FeedSerializer(feed, many=True)
             return Response(serializer.data)
         except Exception as e:
