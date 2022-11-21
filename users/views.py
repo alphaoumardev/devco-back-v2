@@ -62,6 +62,10 @@ class ChangePasswordView(generics.UpdateAPIView):  # To change the password
     model = User
     permission_classes = (IsAuthenticated,)
 
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
+        self.object = None
+
     def get_object(self, queryset=None):
         obj = self.request.user
         return obj
