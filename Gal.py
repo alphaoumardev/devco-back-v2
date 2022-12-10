@@ -8,7 +8,6 @@ def func(X, Y):
     return np.exp((-(X + 3) ** 2 - (Y - 3) ** 2) / 10) * 2 + np.exp((-(X - 3) ** 2 - (Y + 3) ** 2) / 10) * 1.2 + np.exp(
         -np.cos(X * 3) - np.sin(Y * 3)) / 5
 
-
 # %%遗传算法
 time_start = time.time()
 dim = 2
