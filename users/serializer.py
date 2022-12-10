@@ -42,7 +42,7 @@ class ChangePasswordSerializer(serializers.Serializer, ):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(required=False, read_only=True)
+    # user = UserSerializer(required=False, read_only=True)
     my_posts_count = serializers.ReadOnlyField(read_only=True, required=False)
     follow_count = serializers.ReadOnlyField(read_only=True, required=False)
     followedby_count = serializers.ReadOnlyField(read_only=True, required=False)

@@ -8,12 +8,13 @@ from users.serializer import UserSerializer
 
 
 class CommentatorSerializer(serializers.ModelSerializer):
-    user = UserSerializer(required=False, read_only=True)
+    # user = UserSerializer(required=False, read_only=True)
 
     class Meta:
         model = Profile
         # fields = "__all__"
         fields = ["id", "avatar", "user", "following", "followedby", "bio", "followedby_count", "follow_count", 'my_posts_count']
+        depth = 1
 
 
 class CommentsPostSerializer(serializers.ModelSerializer):
@@ -29,13 +30,15 @@ class FeedsPostSerializer(serializers.ModelSerializer):
 
 
 class CommentsSerializer(serializers.ModelSerializer):
-    commentator = CommentatorSerializer(required=False, read_only=True)
+    # commentator = CommentatorSerializer(required=False, read_only=True)
     reply_count = SerializerMethodField()
     like_count = serializers.ReadOnlyField(required=False, read_only=True)
 
     class Meta:
         model = Comments
         fields = "__all__"
+        depth = 1
+
 
     def get_fields(self):
         fields = super(CommentsSerializer, self).get_fields()
@@ -60,12 +63,12 @@ class CommentsSerializer(serializers.ModelSerializer):
 
 
 class FeedSerializer(serializers.ModelSerializer):
-    topic = TopicsSerializer(required=False, read_only=True)
-    profile = CommentatorSerializer(required=False, read_only=True)
+    # topic = TopicsSerializer(required=False, read_only=True)
+    # profile = CommentatorSerializer(required=False, read_only=True)
     num_likes = serializers.ReadOnlyField(read_only=True, required=False)
     num_replies = serializers.ReadOnlyField(read_only=True, required=False)
     num_saves = serializers.ReadOnlyField(read_only=True, required=False)
-    replies = CommentsSerializer(many=True, read_only=True)
+    # replies = CommentsSerializer(many=True, read_only=True)
 
     # l_count = serializers.SerializerMethodField()
     # recent_post = serializers.SerializerMethodField()
@@ -73,6 +76,8 @@ class FeedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feed
         fields = '__all__'
+        depth = 1
+
 
     # @staticmethod
     # @property
