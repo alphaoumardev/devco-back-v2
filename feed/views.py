@@ -110,15 +110,7 @@ def get_one_feed(request, pk):
 
             recent_posts = Feed.objects.filter(profile_id=feed.profile_id).order_by('id').exclude(id=feed.id).reverse()[:3]
             recent_p_seriliazer = FeedSerializer(recent_posts, many=True)
-            """To Jenny"""
-            # print('\n'.join
-            #       ([''.join
-            #         ([('Jenny'[(x - y) % 5]
-            #            if ((x * 0.05) ** 2 + (y * 0.1) ** 2 - 1)
-            #               ** 3 - (x * 0.05) ** 2 * (y * 0.1)
-            #               ** 3 <= 0 else ' ')
-            #           for x in range(-30, 30)])
-            #         for y in range(15, -15, -1)]))
+
             return Response({"data": serializer.data, "recent_posts": recent_p_seriliazer.data})
         except Exception as e:
             return Response({"message": f"{e}"}, status=status.HTTP_204_NO_CONTENT)

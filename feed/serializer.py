@@ -78,6 +78,11 @@ class FeedSerializer(serializers.ModelSerializer):
         fields = '__all__'
         depth = 1
 
+    """"ATTENTION!"""
+    @staticmethod
+    def get_replies(obj):
+        # pro = Product.objects.select_related("category")
+        return CommentsSerializer(obj.replies, many=True).data
 
     # @staticmethod
     # @property
